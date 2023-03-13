@@ -1,8 +1,9 @@
 from typing import List
 
-import sqlmodels
 from sqlmodel import select
 from sqlmodel.orm.session import Session
+
+import sqlmodels
 
 User = sqlmodels.User
 Loan = sqlmodels.Loan
@@ -33,6 +34,10 @@ def create_loan(db: Session, loan: sqlmodels.LoanCreate):
     db.add(db_loan)
     db.commit()
     db.refresh(db_loan)
+    user_loan_relationship = sqlmodels.UserLoanRelationship(loan_id=db_loan.id, user_id=db_loan.primary_user_id)
+    db.add(user_loan_relationship)
+    db.commit()
+    db.refresh(user_loan_relationship)
     return db_loan
 
 
@@ -70,3 +75,14 @@ def fetch_loan_summary(month: int, loan_schedule: List[sqlmodels.LoanSchedule], 
     return sqlmodels.LoanSummary(month = month, principal_balance = month_info.remaining_balance,
                                  principal_balance_paid = principal_paid, interest_paid = interest_paid)
 
+
+def get_relationship(db: Session, limit: int = 100):
+    return db.exec(select(sqlmodels.UserLoanRelationship).limit(limit)).all()
+
+
+def create_relationship(db: Session, user_id: int, loan_id: int):
+    db_user = sqlmodels.UserLoanRelationship(user_id=user_id, loan_id=loan_id)
+    db.add(db_user)
+    db.commit()
+    db.refresh(db_user)
+    return db_user

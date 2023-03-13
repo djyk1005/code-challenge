@@ -1,22 +1,24 @@
 from typing import List
 
-import crud
-import sqlmodels
 import uvicorn
-from database import SessionLocal, engine
 from fastapi import Depends, FastAPI, HTTPException
 from sqlmodel.orm.session import Session
+
+import crud
+import sqlmodels
+from database import SessionLocal, engine
 
 app = FastAPI(title="Loan Amortization App")
 
 tags_metadata = [
     {
         "name": "Users",
-        "description": ""
+        "description": "User related endpoints to create and/or get user. "
+                       "Also endpoint for getting all the loans for a user."
     },
     {
         "name": "Loans",
-        "description": ""
+        "description": "Loan related endpoints. Loan creation, schedule and summary."
     }
 ]
 
@@ -64,12 +66,33 @@ def get_user_loans(user_email: str, db: Session = Depends(get_db)):
     return db_user
 
 
+@app.get("/users/{user_email}/loans/share/{loan_id}", response_model=sqlmodels.UserLoanRelationship, tags=["Users"])
+def share_user_loans(user_email: str, loan_id: int, shared_user_id: int, db: Session = Depends(get_db)):
+    db_user = crud.get_user_by_email(db, email=user_email)
+    if db_user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    db_loan = crud.get_loan(db, loan_id)
+    if db_loan is None:
+        raise HTTPException(status_code=404, detail="Loan not found")
+    if db_user.id != db_loan.primary_user_id:
+        raise HTTPException(status_code=400, detail="Only the primary loan holder may share the loan")
+    return crud.create_relationship(db, shared_user_id, loan_id)
+
+
 @app.post("/loans/", response_model=sqlmodels.LoanRead, tags=["Loans"])
 def create_loan(loan: sqlmodels.LoanCreate, db: Session = Depends(get_db)):
-    db_user = crud.get_user(db, loan.user_id)
+    db_user = crud.get_user(db, loan.primary_user_id)
     if db_user is None:
         raise HTTPException(status_code=404, detail="User not found")
     return crud.create_loan(db, loan)
+
+
+@app.get("/loans/{loan_id}", response_model=sqlmodels.LoanReadWithUsers, tags=["Loans"])
+def get_loan(loan_id: int, db: Session = Depends(get_db)):
+    db_loan = crud.get_loan(db, loan_id)
+    if db_loan is None:
+        raise HTTPException(status_code=404, detail="Loan not found")
+    return db_loan
 
 
 @app.get("/loans/schedule/{loan_id}", response_model=List[sqlmodels.LoanSchedule], tags=["Loans"])
