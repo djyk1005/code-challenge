@@ -16,7 +16,7 @@ class User(UserBase, table=True):
 
 
 class UserCreate(UserBase):
-    password: str
+    pass
 
 
 class UserRead(UserBase):
@@ -45,3 +45,16 @@ class LoanCreate(LoanBase):
 
 class UserReadWithLoans(UserRead):
     loans: List[LoanRead] = []
+
+
+class LoanSchedule(SQLModel):
+    month: int
+    remaining_balance: condecimal(decimal_places=2)
+    monthly_payment: condecimal(decimal_places=2)
+
+
+class LoanSummary(SQLModel):
+    month: int
+    principal_balance: condecimal(decimal_places=2)
+    principal_balance_paid: condecimal(decimal_places=2)
+    interest_paid: condecimal(decimal_places=2)

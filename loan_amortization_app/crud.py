@@ -1,7 +1,8 @@
-from sqlmodel.orm.session import Session
+from typing import List
 
-from . import sqlmodels
+import sqlmodels
 from sqlmodel import select
+from sqlmodel.orm.session import Session
 
 User = sqlmodels.User
 Loan = sqlmodels.Loan
@@ -20,9 +21,7 @@ def get_users(db: Session, limit: int = 100):
 
 
 def create_user(db: Session, user: sqlmodels.UserCreate):
-    fake_hashed_password = user.password + "notreallyhashed"
     db_user = User.from_orm(user)
-    db_user.hashed_password = fake_hashed_password
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
@@ -35,3 +34,39 @@ def create_loan(db: Session, loan: sqlmodels.LoanCreate):
     db.commit()
     db.refresh(db_loan)
     return db_loan
+
+
+def get_loan(db: Session, loan_id: int):
+    return db.get(sqlmodels.Loan, loan_id)
+
+
+def fetch_loan_schedule(loan: sqlmodels.LoanRead):
+    loan_amount = float(loan.amount)
+    monthly_interest_rate = float((loan.annual_interest_rate/100) / 12)
+    term = float(loan.loan_term_in_months)
+
+    numerator = (monthly_interest_rate * ((float(1) + monthly_interest_rate) ** term))
+    denominator = (((float(1) + monthly_interest_rate) ** term) - float(1))
+
+    monthly_payment = loan_amount * (numerator/denominator)
+
+    schedule = []
+    remaining = loan_amount
+    for i in range(loan.loan_term_in_months):
+        principal = monthly_payment - (remaining * monthly_interest_rate)
+        remaining -= principal
+        s = sqlmodels.LoanSchedule(month = i +1, monthly_payment = round(monthly_payment, 2),
+                                   remaining_balance = round(remaining, 2))
+        schedule.append(s)
+
+    return schedule
+
+
+def fetch_loan_summary(month: int, loan_schedule: List[sqlmodels.LoanSchedule], loan: sqlmodels.LoanRead):
+    month_info = loan_schedule[month - 1]
+    loan_amount = loan.amount
+    principal_paid = loan_amount - month_info.remaining_balance
+    interest_paid = (month_info.monthly_payment * month) - principal_paid
+    return sqlmodels.LoanSummary(month = month, principal_balance = month_info.remaining_balance,
+                                 principal_balance_paid = principal_paid, interest_paid = interest_paid)
+
