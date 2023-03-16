@@ -1,14 +1,35 @@
+if __package__ is None:
+    __package__ = "loan_amortization_app"
+
 from typing import List
 
 import uvicorn
 from fastapi import Depends, FastAPI, HTTPException
 from sqlmodel.orm.session import Session
 
-import crud
-import sqlmodels
-from database import SessionLocal, engine
+from . import crud
+from . import sqlmodels
+from .database import SessionLocal, engine
 
-app = FastAPI(title="Loan Amortization App")
+description = """
+The Loan Amortization App API provides useful endpoints to calculate the amortization of loans. 
+This app is built using the FastAPI and SQLmodel python libraries.
+
+## Users
+* **Get all Users in the database**
+* **Create a new user**
+* **Fetch a user using the email**
+* **Fetch all of the loans that a user is associated with**
+* **Allow a user to share a loan with another user**
+
+## Loans
+* **Create a new loan and associate it with a user**
+* **Fetch a loan with the loan_id**
+* **Generate an amortization schedule for a specific loan**
+* **Fetch the loan summary for a specific month**
+"""
+
+app = FastAPI(title="Loan Amortization App", description=description)
 
 tags_metadata = [
     {
@@ -76,6 +97,9 @@ def share_user_loans(user_email: str, loan_id: int, shared_user_id: int, db: Ses
         raise HTTPException(status_code=404, detail="Loan not found")
     if db_user.id != db_loan.primary_user_id:
         raise HTTPException(status_code=400, detail="Only the primary loan holder may share the loan")
+    db_share_user = crud.get_user(db, user_id=shared_user_id)
+    if db_share_user is None:
+        raise HTTPException(status_code=404, detail="User to share loan not found")
     return crud.create_relationship(db, shared_user_id, loan_id)
 
 
