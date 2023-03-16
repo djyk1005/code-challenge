@@ -224,3 +224,97 @@ def test_get_user_loans_user_not_found(client: TestClient):
     obj = response.json()
     assert obj['detail'] == "User not found"
 
+
+def test_get_user_share_loan(db: Session, client: TestClient):
+    user1 = sqlmodels.User(name="testUser", email="user1@gmail.com")
+    db.add(user1)
+    user2 = sqlmodels.User(name="testUser2", email="user2@gmail.com")
+    db.add(user2)
+    db.commit()
+    db.refresh(user1)
+    db.refresh(user2)
+
+    loan1 = sqlmodels.Loan(amount=250000, annual_interest_rate=4.5, loan_term_in_months=360, primary_user_id=user1.id)
+    db.add(loan1)
+    db.commit()
+    db.refresh(loan1)
+
+    response = client.get("/users/user1@gmail.com/loans/share/" + str(loan1.id) + "?shared_user_id=" + str(user2.id))
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data['loan_id'] == loan1.id
+    assert data['user_id'] == user2.id
+
+
+def test_get_user_share_loan_user_not_found(db: Session, client: TestClient):
+    user2 = sqlmodels.User(name="testUser2", email="user2@gmail.com")
+    db.add(user2)
+    db.commit()
+    db.refresh(user2)
+
+    loan1 = sqlmodels.Loan(amount=250000, annual_interest_rate=4.5, loan_term_in_months=360, primary_user_id=user2.id)
+    db.add(loan1)
+    db.commit()
+    db.refresh(loan1)
+
+    response = client.get("/users/user1@gmail.com/loans/share/" + str(loan1.id) + "?shared_user_id=" + str(user2.id))
+
+    assert response.status_code == 404
+    data = response.json()
+    assert data['detail'] == "User not found"
+
+
+def test_get_user_share_loan_loan_not_found(db: Session, client: TestClient):
+    user1 = sqlmodels.User(name="testUser", email="user1@gmail.com")
+    db.add(user1)
+    user2 = sqlmodels.User(name="testUser2", email="user2@gmail.com")
+    db.add(user2)
+    db.commit()
+    db.refresh(user1)
+    db.refresh(user2)
+
+    response = client.get("/users/user1@gmail.com/loans/share/1?shared_user_id=" + str(user2.id))
+
+    assert response.status_code == 404
+    data = response.json()
+    assert data['detail'] == "Loan not found"
+
+
+def test_get_user_share_loan_non_primary_user(db: Session, client: TestClient):
+    user1 = sqlmodels.User(name="testUser", email="user1@gmail.com")
+    db.add(user1)
+    user2 = sqlmodels.User(name="testUser2", email="user2@gmail.com")
+    db.add(user2)
+    db.commit()
+    db.refresh(user1)
+    db.refresh(user2)
+
+    loan1 = sqlmodels.Loan(amount=250000, annual_interest_rate=4.5, loan_term_in_months=360, primary_user_id=user1.id)
+    db.add(loan1)
+    db.commit()
+    db.refresh(loan1)
+
+    response = client.get("/users/user2@gmail.com/loans/share/" + str(loan1.id) + "?shared_user_id=2")
+
+    assert response.status_code == 400
+    data = response.json()
+    assert data['detail'] == "Only the primary loan holder may share the loan"
+
+
+def test_get_user_share_loan_share_user_not_found(db: Session, client: TestClient):
+    user1 = sqlmodels.User(name="testUser", email="user1@gmail.com")
+    db.add(user1)
+    db.commit()
+    db.refresh(user1)
+
+    loan1 = sqlmodels.Loan(amount=250000, annual_interest_rate=4.5, loan_term_in_months=360, primary_user_id=user1.id)
+    db.add(loan1)
+    db.commit()
+    db.refresh(loan1)
+
+    response = client.get("/users/user1@gmail.com/loans/share/" + str(loan1.id) + "?shared_user_id=2")
+
+    assert response.status_code == 404
+    data = response.json()
+    assert data['detail'] == "User to share loan not found"
