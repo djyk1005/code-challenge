@@ -1,8 +1,8 @@
-from .test_users import session_fixture, client_fixture, before_test
+from test_users import session_fixture, client_fixture, before_test
 
 from fastapi.testclient import TestClient
 from sqlmodel import Session, select
-from . import sqlmodels
+import sqlmodels
 
 
 def test_get_loan(db: Session, client: TestClient):

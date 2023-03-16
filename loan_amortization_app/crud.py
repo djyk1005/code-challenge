@@ -3,7 +3,7 @@ from typing import List
 from sqlmodel import select
 from sqlmodel.orm.session import Session
 
-from . import sqlmodels
+import sqlmodels
 
 User = sqlmodels.User
 Loan = sqlmodels.Loan

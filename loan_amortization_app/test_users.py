@@ -3,8 +3,8 @@ from fastapi.testclient import TestClient
 from sqlmodel import Session, create_engine, delete
 from sqlmodel.pool import StaticPool
 
-from . import sqlmodels
-from .main import app, get_db
+import sqlmodels
+from main import app, get_db
 
 
 @pytest.fixture(name="db")

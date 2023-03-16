@@ -7,9 +7,9 @@ import uvicorn
 from fastapi import Depends, FastAPI, HTTPException
 from sqlmodel.orm.session import Session
 
-from . import crud
-from . import sqlmodels
-from .database import SessionLocal, engine
+import crud
+import sqlmodels
+from database import SessionLocal, engine
 
 description = """
 The Loan Amortization App API provides useful endpoints to calculate the amortization of loans. 
